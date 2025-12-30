@@ -99,43 +99,48 @@ df["Binomial_price"] = df.apply(
 def trinomial_price(cp, S0, K, r, T, sigma, N=100):
     dt = T / N
     disc = math.exp(-r * dt)
-
+    
+    # Trinomial factors (Boyle)
     u = math.exp(sigma * math.sqrt(3 * dt))
     d = 1 / u
     m = 1.0
-
-    pu = 1/6 + (r * math.sqrt(dt) / (2 * sigma * math.sqrt(3)))
-    pd = 1/6 - (r * math.sqrt(dt) / (2 * sigma * math.sqrt(3)))
-    pm = 2/3
-
-    payoff = (lambda S: max(S-K,0)) if cp=="c" else (lambda S: max(K-S,0))
-
+    
+    drift = r - 0.5 * sigma**2
+    pu = max(0, min(1, 1/6 + drift * math.sqrt(dt) / (2 * sigma * math.sqrt(3))))
+    pd = max(0, min(1, 1/6 - drift * math.sqrt(dt) / (2 * sigma * math.sqrt(3))))
+    pm = 1 - pu - pd
+    
+    if pu < 0 or pd < 0 or pm < 0:
+        raise ValueError("Probabilités négatives – augmenter N")
+    
+    payoff = (lambda S: max(S - K, 0)) if cp == "c" else (lambda S: max(K - S, 0))
+    
     # Terminal values
     values = {}
-    for i in range(N+1):
-        for j in range(N+1-i):
+    for i in range(N + 1):
+        for j in range(N + 1 - i):
             k = N - i - j
             S_T = S0 * (u**i) * (m**j) * (d**k)
-            values[(i,j,k)] = payoff(S_T)
-
+            values[(i, j, k)] = payoff(S_T)
+    
     # Backward induction
-    for step in range(N-1, -1, -1):
-        new = {}
-        for i in range(step+1):
-            for j in range(step+1-i):
+    for step in range(N - 1, -1, -1):
+        new_values = {}
+        for i in range(step + 1):
+            for j in range(step + 1 - i):
                 k = step - i - j
-                new[(i,j,k)] = disc * (
-                    pu * values[(i+1, j, k)] +
-                    pm * values[(i, j+1, k)] +
-                    pd * values[(i, j, k+1)]
+                new_values[(i, j, k)] = disc * (
+                    pu * values[(i + 1, j, k)] +
+                    pm * values[(i, j + 1, k)] +
+                    pd * values[(i, j, k + 1)]
                 )
-        values = new
-
-    return values[(0,0,0)]
-
+        values = new_values
+    
+    return values[(0, 0, 0)]
 
 df["Trinomial_price"] = df.apply(
-    lambda row: trinomial_price(row["cp"], row["Spot"], row["Strike"], r, row["T"], row["IV"]), axis=1
+    lambda row: trinomial_price(row["cp"], row["Spot"], row["Strike"], r, row["T"], row["IV"]),
+    axis=1
 )
 
 # ============================================================
