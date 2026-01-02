@@ -74,7 +74,7 @@ df["BS_price"] = df.apply(lambda row: bs_price(row["Spot"], row["Strike"], r, ro
 # 4) Modèle binomial
 # ============================================================
 
-def binomial_price(cp, S0, K, r, T, sigma, N=200):
+def binomial_price(cp, S0, K, r, T, sigma, N=100):
     dt = T / N
     u = math.exp(sigma * math.sqrt(dt))
     d = 1 / u
@@ -279,3 +279,4 @@ import seaborn as sns
 sns.heatmap(corr, annot=True, cmap="coolwarm", vmin=-1, vmax=1)
 plt.title("Corrélation entre modèles et marché")
 plt.show()
+
